@@ -217,6 +217,14 @@ namespace MoonWorks
 					GraphicsDevice.SetSwapchainParameters(MainWindow, SwapchainComposition.SDR, PresentMode.Immediate);
 				}
 			}
+			else if (settings.Mode == FramePacingMode.Uncapped)
+			{
+				// Use immediate present mode for maximum throughput
+				if (GraphicsDevice.SupportsPresentMode(MainWindow, PresentMode.Immediate))
+				{
+					GraphicsDevice.SetSwapchainParameters(MainWindow, SwapchainComposition.SDR, PresentMode.Immediate);
+				}
+			}
 
 			FramePacingSettings = settings;
 		}
@@ -297,7 +305,11 @@ namespace MoonWorks
 			}
 
 			// Wait for the swapchain before event processing to minimize input latency.
-			GraphicsDevice.WaitForSwapchain(MainWindow);
+			// Only do this in latency-optimized mode; in other modes it bottlenecks throughput.
+			if (FramePacingSettings.Mode == FramePacingMode.LatencyOptimized)
+			{
+				GraphicsDevice.WaitForSwapchain(MainWindow);
+			}
 
 			if (processEvents)
 			{

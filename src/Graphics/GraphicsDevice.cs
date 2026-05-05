@@ -90,6 +90,8 @@ public class GraphicsDevice : IDisposable
 			SDL3.SDL.SDL_SetBooleanProperty(properties, "SDL.gpu.device.create.shaders.metallib", true);
 		}
 
+		SDL3.SDL.SDL_SetStringProperty(properties, SDL3.SDL.SDL_PROP_GPU_DEVICE_CREATE_NAME_STRING, "direct3d12");
+
 		// FIXME: we could redesign this API
 		var agilitySDKVersion = Environment.GetEnvironmentVariable("AGILITY_SDK_VERSION");
 		if (agilitySDKVersion != null)

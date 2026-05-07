@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using MoonWorks.Storage;
 using SDL = MoonWorks.Graphics.SDL_GPU;
@@ -237,7 +238,7 @@ namespace MoonWorks.Graphics
 				SDL_ShaderCross.INTERNAL_HLSLDefine* definesBuffer = null;
 				if (defines.Length > 0)
 				{
-					definesBuffer = (SDL_ShaderCross.INTERNAL_HLSLDefine*) NativeMemory.Alloc((nuint) (Marshal.SizeOf<SDL_ShaderCross.INTERNAL_HLSLDefine>() * (defines.Length + 1)));
+					definesBuffer = (SDL_ShaderCross.INTERNAL_HLSLDefine*) NativeMemory.Alloc((nuint) (Unsafe.SizeOf<SDL_ShaderCross.INTERNAL_HLSLDefine>() * (defines.Length + 1)));
 					for (var i = 0; i < defines.Length; i += 1)
 					{
 						definesBuffer[i].Name = InteropUtilities.EncodeToUTF8Buffer(defines[i].Name);

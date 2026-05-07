@@ -1,3 +1,4 @@
+using System;
 using System.Runtime.InteropServices;
 using System.Numerics;
 
@@ -10,14 +11,14 @@ namespace MoonWorks.Graphics.Font
 		public Vector2 TexCoord;
 		public uint ChunkIndex;
 
-		public static VertexElementFormat[] Formats { get; } =
+		public static ReadOnlySpan<VertexElementFormat> Formats =>
 		[
 			VertexElementFormat.Float2,
 			VertexElementFormat.Float2,
 			VertexElementFormat.Uint
 		];
 
-		public static uint[] Offsets { get; } =
+		public static ReadOnlySpan<uint> Offsets =>
 		[
 			0,
 			8,

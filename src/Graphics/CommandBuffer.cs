@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using SDL = MoonWorks.Graphics.SDL_GPU;
 
 namespace MoonWorks.Graphics;
@@ -95,7 +94,7 @@ public class CommandBuffer
 	{
 		fixed (T* uniformsPtr = &uniforms)
 		{
-			PushVertexUniformData(uniformsPtr, (uint) Marshal.SizeOf<T>(), slot);
+			PushVertexUniformData(uniformsPtr, (uint) Unsafe.SizeOf<T>(), slot);
 		}
 	}
 
@@ -129,7 +128,7 @@ public class CommandBuffer
 	{
 		fixed (T* uniformsPtr = &uniforms)
 		{
-			PushFragmentUniformData(uniformsPtr, (uint) Marshal.SizeOf<T>(), slot);
+			PushFragmentUniformData(uniformsPtr, (uint) Unsafe.SizeOf<T>(), slot);
 		}
 	}
 
@@ -163,7 +162,7 @@ public class CommandBuffer
 	{
 		fixed (T* uniformsPtr = &uniforms)
 		{
-			PushComputeUniformData(uniformsPtr, (uint) Marshal.SizeOf<T>(), slot);
+			PushComputeUniformData(uniformsPtr, (uint) Unsafe.SizeOf<T>(), slot);
 		}
 	}
 

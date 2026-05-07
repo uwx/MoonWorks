@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using MoonWorks.Storage;
 
@@ -240,7 +241,7 @@ namespace MoonWorks.Audio
 				var info = FAudio.stb_vorbis_get_info(filePointer);
 				var lengthInFloats =
 					FAudio.stb_vorbis_stream_length_in_samples(filePointer) * info.channels;
-				lengthInBytes = (uint) (lengthInFloats * Marshal.SizeOf<float>());
+				lengthInBytes = (uint) (lengthInFloats * Unsafe.SizeOf<float>());
 				buffer = (nint) NativeMemory.Alloc((nuint) lengthInBytes);
 
 				FAudio.stb_vorbis_get_samples_float_interleaved(

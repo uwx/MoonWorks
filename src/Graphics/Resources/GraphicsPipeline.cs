@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using SDL = MoonWorks.Graphics.SDL_GPU;
 
@@ -22,7 +23,7 @@ public class GraphicsPipeline : SDLGPUResource
 		INTERNAL_GraphicsPipelineCreateInfo createInfo;
 
 		var vertexAttributes = (VertexAttribute*) NativeMemory.Alloc(
-			(nuint) (graphicsPipelineCreateInfo.VertexInputState.VertexAttributes.Length * Marshal.SizeOf<VertexAttribute>())
+			(nuint) (graphicsPipelineCreateInfo.VertexInputState.VertexAttributes.Length * Unsafe.SizeOf<VertexAttribute>())
 		);
 
 		for (var i = 0; i < graphicsPipelineCreateInfo.VertexInputState.VertexAttributes.Length; i += 1)
@@ -31,7 +32,7 @@ public class GraphicsPipeline : SDLGPUResource
 		}
 
 		var vertexBindings = (VertexBufferDescription*) NativeMemory.Alloc(
-			(nuint) (graphicsPipelineCreateInfo.VertexInputState.VertexBufferDescriptions.Length * Marshal.SizeOf<VertexBufferDescription>())
+			(nuint) (graphicsPipelineCreateInfo.VertexInputState.VertexBufferDescriptions.Length * Unsafe.SizeOf<VertexBufferDescription>())
 		);
 
 		for (var i = 0; i < graphicsPipelineCreateInfo.VertexInputState.VertexBufferDescriptions.Length; i += 1)

@@ -456,6 +456,8 @@ public struct TextureRegion
 		H = texture.Height;
 		D = texture.Type == TextureType.ThreeDimensional ? texture.LayerCountOrDepth : 1;
 	}
+
+	public static implicit operator TextureRegion(Texture texture) => new(texture);
 }
 
 [StructLayout(LayoutKind.Sequential)]
@@ -650,7 +652,7 @@ public struct VertexBufferDescription
 		return new VertexBufferDescription
 		{
 			Slot = slot,
-			Pitch = (uint) Marshal.SizeOf<T>(),
+			Pitch = (uint) Unsafe.SizeOf<T>(),
 			InputRate = inputRate,
 			InstanceStepRate = stepRate
 		};
@@ -960,8 +962,8 @@ public struct VertexInputState
 
 		for (uint i = 0; i < T.Formats.Length; i += 1)
 		{
-			var format = T.Formats[i];
-			var offset = T.Offsets[i];
+			var format = T.Formats[(int)i];
+			var offset = T.Offsets[(int)i];
 
 			attributes[i] = new VertexAttribute
 			{

@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using MoonWorks.Storage;
 
@@ -19,8 +21,8 @@ public unsafe class ResourceUploader : GraphicsResource
 	TransferBuffer TransferBuffer;
 	uint WriteOffset = 0;
 
-	record struct BufferUpload(uint Offset, BufferRegion BufferRegion, bool Cycle);
-	record struct TextureUpload(uint Offset, TextureRegion TextureRegion, bool Cycle);
+	readonly record struct BufferUpload(uint Offset, BufferRegion BufferRegion, bool Cycle);
+	readonly record struct TextureUpload(uint Offset, TextureRegion TextureRegion, bool Cycle);
 
 	List<BufferUpload> BufferUploads = [];
 	List<TextureUpload> TextureUploads = [];
@@ -63,15 +65,15 @@ public unsafe class ResourceUploader : GraphicsResource
 	/// </summary>
 	public void SetBufferData<T>(Buffer buffer, uint bufferOffsetInElements, ReadOnlySpan<T> data, bool cycle) where T : unmanaged
 	{
-		uint elementSize = (uint) Marshal.SizeOf<T>();
+		Debug.Assert(buffer != null);
+
+		uint elementSize = (uint) Unsafe.SizeOf<T>();
 		uint offsetInBytes = elementSize * bufferOffsetInElements;
 		uint lengthInBytes = (uint) (elementSize * data.Length);
 
-		uint resourceOffset;
-		fixed (void* spanPtr = data)
-		{
-			resourceOffset = CopyBufferData(data);
-		}
+		Debug.Assert(buffer.Size >= offsetInBytes + lengthInBytes, $"Buffer is too small for data! buffer.Size={buffer.Size}, offsetInBytes={offsetInBytes}, lengthInBytes={lengthInBytes}");
+
+		var resourceOffset = CopyBufferData(data);
 
 		BufferUploads.Add(new BufferUpload(
 			resourceOffset,
@@ -83,6 +85,37 @@ public unsafe class ResourceUploader : GraphicsResource
 			},
 			cycle
 		));
+	}
+
+	/// <summary>
+	/// Prepares upload of data into a Buffer.
+	/// </summary>
+	/// <returns>
+	/// A <see cref="Span{T}"/> which can be written to. This <see cref="Span{T}"/> is not valid and
+	/// must not be used after any further calls to this instance.
+	/// </returns>
+	public Span<T> MapBufferData<T>(Buffer buffer, uint bufferOffsetInElements, uint desiredLengthInElements, bool cycle) where T : unmanaged
+	{
+		uint elementSize = (uint) Unsafe.SizeOf<T>();
+		uint offsetInBytes = elementSize * bufferOffsetInElements;
+		uint lengthInBytes = elementSize * desiredLengthInElements;
+
+		Debug.Assert(buffer.Size >= offsetInBytes + lengthInBytes, $"Buffer is too small for data! buffer.Size={buffer.Size}, offsetInBytes={offsetInBytes}, lengthInBytes={lengthInBytes}");
+
+		var resourceOffset = MapTransferBufferData<T>(desiredLengthInElements, out var data);
+
+		BufferUploads.Add(new BufferUpload(
+			resourceOffset,
+			new BufferRegion
+			{
+				Buffer = buffer.Handle,
+				Offset = offsetInBytes,
+				Size = lengthInBytes
+			},
+			cycle
+		));
+
+		return data;
 	}
 
 	// Textures
@@ -163,7 +196,6 @@ public unsafe class ResourceUploader : GraphicsResource
 	/// </summary>
 	public Texture CreateTexture2DFromCompressed(TitleStorage storage, string compressedImageFilePath, TextureFormat format, TextureUsageFlags usage) =>
 		CreateTexture2DFromCompressed(System.IO.Path.GetFileNameWithoutExtension(compressedImageFilePath), storage, compressedImageFilePath, format, usage);
-
 
 	/// <summary>
 	/// Creates a texture from a DDS stream.
@@ -246,7 +278,7 @@ public unsafe class ResourceUploader : GraphicsResource
 	public Texture CreateTextureFromDDS(TitleStorage storage, string path) =>
 		CreateTextureFromDDS(System.IO.Path.GetFileNameWithoutExtension(path), storage, path);
 
-	public void SetTextureDataFromCompressed(TextureRegion textureRegion, ReadOnlySpan<byte> compressedImageData)
+	public void SetTextureDataFromCompressed(in TextureRegion textureRegion, ReadOnlySpan<byte> compressedImageData)
 	{
 		var pixelData = ImageUtils.GetPixelDataFromBytes(compressedImageData, out var _, out var _, out var sizeInBytes);
 		var pixelSpan = new ReadOnlySpan<byte>((void*) pixelData, (int) sizeInBytes);
@@ -278,22 +310,39 @@ public unsafe class ResourceUploader : GraphicsResource
 	/// <summary>
 	/// Prepares upload of pixel data into a TextureSlice.
 	/// </summary>
-	public void SetTextureData<T>(TextureRegion textureRegion, ReadOnlySpan<T> data, bool cycle) where T : unmanaged
+	public void SetTextureData<T>(in TextureRegion textureRegion, ReadOnlySpan<T> data, bool cycle) where T : unmanaged
 	{
-		var elementSize = Marshal.SizeOf<T>();
-		var dataLengthInBytes = (uint) (elementSize * data.Length);
+		Debug.Assert(textureRegion.Texture != IntPtr.Zero);
 
-		uint resourceOffset;
-		fixed (T* dataPtr = data)
-		{
-			resourceOffset = CopyTextureData(data, 16); // Align to biggest possible pixel size
-		}
+		var resourceOffset = CopyTextureData(data, 16); // Align to biggest possible pixel size
 
 		TextureUploads.Add(new TextureUpload(
 			resourceOffset,
 			textureRegion,
 			cycle
 		));
+	}
+
+	/// <summary>
+	/// Prepares upload of pixel data into a TextureSlice.
+	/// </summary>
+	/// <returns>
+	/// A <see cref="Span{T}"/> which can be written to. This <see cref="Span{T}"/> is not valid and
+	/// must not be used after any further calls to this instance.
+	/// </returns>
+	public Span<T> MapTextureData<T>(in TextureRegion textureRegion, uint desiredLengthInElements, bool cycle) where T : unmanaged
+	{
+		Debug.Assert(textureRegion.Texture != IntPtr.Zero);
+
+		var resourceOffset = MapTransferBufferTextureData<T>(desiredLengthInElements, 16, out var data); // Align to biggest possible pixel size
+
+		TextureUploads.Add(new TextureUpload(
+			resourceOffset,
+			textureRegion,
+			cycle
+		));
+
+		return data;
 	}
 
 	// Upload
@@ -369,13 +418,8 @@ public unsafe class ResourceUploader : GraphicsResource
 
 	private uint CopyBufferData<T>(ReadOnlySpan<T> span) where T : unmanaged
 	{
-		uint lengthInBytes = (uint) (Marshal.SizeOf<T>() * span.Length);
-		CheckAndResizeTransferBuffer(lengthInBytes);
-
-		if (WriteOffset + lengthInBytes > TransferBuffer.Size)
-		{
-			Flush();
-		}
+		uint lengthInBytes = (uint) (Unsafe.SizeOf<T>() * span.Length);
+		CheckAndResizeTransferBuffer(WriteOffset + lengthInBytes);
 
 		var resourceOffset = WriteOffset;
 		span.CopyTo(TransferBuffer.MappedSpan<T>(resourceOffset));
@@ -384,19 +428,41 @@ public unsafe class ResourceUploader : GraphicsResource
 		return resourceOffset;
 	}
 
+	private uint MapTransferBufferData<T>(uint desiredLengthInElements, out Span<T> data) where T : unmanaged
+	{
+		uint lengthInBytes = (uint) (Unsafe.SizeOf<T>() * desiredLengthInElements);
+		CheckAndResizeTransferBuffer(WriteOffset + lengthInBytes);
+
+		var resourceOffset = WriteOffset;
+		data = TransferBuffer.MappedSpan<T>(resourceOffset)[..(int) desiredLengthInElements];
+		WriteOffset += lengthInBytes;
+
+		return resourceOffset;
+	}
+
 	private uint CopyTextureData<T>(ReadOnlySpan<T> span, uint alignment) where T : unmanaged
 	{
-		uint lengthInBytes = (uint) (Marshal.SizeOf<T>() * span.Length);
-		CheckAndResizeTransferBuffer(lengthInBytes);
+		uint lengthInBytes = (uint) (Unsafe.SizeOf<T>() * span.Length);
 
 		WriteOffset = RoundToAlignment(WriteOffset, alignment);
-		if (WriteOffset + lengthInBytes >= TransferBuffer.Size)
-		{
-			Flush();
-		}
+		CheckAndResizeTransferBuffer(WriteOffset + lengthInBytes);
 
 		var resourceOffset = WriteOffset;
 		span.CopyTo(TransferBuffer.MappedSpan<T>(resourceOffset));
+		WriteOffset += lengthInBytes;
+
+		return resourceOffset;
+	}
+
+	private uint MapTransferBufferTextureData<T>(uint desiredLengthInElements, uint alignment, out Span<T> data) where T : unmanaged
+	{
+		uint lengthInBytes = (uint) (Unsafe.SizeOf<T>() * desiredLengthInElements);
+
+		WriteOffset = RoundToAlignment(WriteOffset, alignment);
+		CheckAndResizeTransferBuffer(WriteOffset + lengthInBytes);
+
+		var resourceOffset = WriteOffset;
+		data = TransferBuffer.MappedSpan<T>(resourceOffset)[..(int) desiredLengthInElements];
 		WriteOffset += lengthInBytes;
 
 		return resourceOffset;
@@ -411,7 +477,7 @@ public unsafe class ResourceUploader : GraphicsResource
 		}
 		else if (dataLengthInBytes > TransferBuffer.Size)
 		{
-			Logger.LogInfo("Resizing resource uploader!");
+			Logger.LogInfo($"Resizing resource uploader to {dataLengthInBytes} bytes!");
 			Flush();
 			TransferBuffer.Unmap();
 			TransferBuffer.Dispose();
@@ -420,7 +486,7 @@ public unsafe class ResourceUploader : GraphicsResource
 		}
 	}
 
-	private uint RoundToAlignment(uint value, uint alignment)
+	private static uint RoundToAlignment(uint value, uint alignment)
 	{
 		return alignment * ((value + alignment - 1) / alignment);
 	}

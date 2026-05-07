@@ -1,5 +1,5 @@
 using System;
-using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 
 namespace MoonWorks.Audio
 {
@@ -109,7 +109,7 @@ namespace MoonWorks.Audio
 					Handle,
 					0,
 					(nint) reverbParamsPtr,
-					(uint) Marshal.SizeOf<FAudio.FAudioFXReverbParameters>(),
+					(uint) Unsafe.SizeOf<FAudio.FAudioFXReverbParameters>(),
 					0
 				);
 

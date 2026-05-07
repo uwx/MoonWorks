@@ -74,6 +74,7 @@ namespace MoonWorks
 			WindowCreateInfo windowCreateInfo,
 			FramePacingSettings framePacingSettings,
 			ShaderFormat availableShaderFormats,
+			string backend,
 			bool debugMode = false
 		) {
 			AppInfo = appInfo;
@@ -111,7 +112,8 @@ namespace MoonWorks
 			GraphicsDevice = new GraphicsDevice(
 				RootTitleStorage,
 				availableShaderFormats,
-				debugMode
+				debugMode,
+				backend
 			);
 
 			Logger.LogInfo("Initializing main window...");

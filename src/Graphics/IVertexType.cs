@@ -1,3 +1,5 @@
+using System;
+
 namespace MoonWorks.Graphics;
 
 /// <summary>
@@ -8,10 +10,10 @@ public interface IVertexType
 	/// <summary>
 	/// An ordered list of the types in your vertex struct.
 	/// </summary>
-	static abstract VertexElementFormat[] Formats { get; }
+	static abstract ReadOnlySpan<VertexElementFormat> Formats { get; }
 
 	/// <summary>
 	/// An ordered list of the offsets in your vertex struct.
 	/// </summary>
-	static abstract uint[] Offsets { get; }
+	static abstract ReadOnlySpan<uint> Offsets { get; }
 }

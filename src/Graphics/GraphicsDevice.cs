@@ -53,7 +53,8 @@ public class GraphicsDevice : IDisposable
 	internal unsafe GraphicsDevice(
 		TitleStorage rootTitleStorage,
 		ShaderFormat shaderFormats,
-		bool debugMode
+		bool debugMode,
+		string backend
 	) {
 		if (shaderFormats == 0)
 		{
@@ -64,9 +65,9 @@ public class GraphicsDevice : IDisposable
 
 		// FIXME: we could redesign this API
 		var forceBackend = Environment.GetEnvironmentVariable("MOONWORKS_FORCE_GRAPHICS_BACKEND");
-		if (forceBackend != null)
+		if (forceBackend != null || backend != null)
 		{
-			SDL3.SDL.SDL_SetStringProperty(properties, "SDL.gpu.device.create.name", forceBackend);
+			SDL3.SDL.SDL_SetStringProperty(properties, "SDL.gpu.device.create.name", forceBackend ?? backend);
 		}
 
 		SDL3.SDL.SDL_SetBooleanProperty(properties, "SDL.gpu.device.create.debugmode", debugMode);
@@ -89,8 +90,6 @@ public class GraphicsDevice : IDisposable
 		if ((shaderFormats & ShaderFormat.MetalLib) != 0) {
 			SDL3.SDL.SDL_SetBooleanProperty(properties, "SDL.gpu.device.create.shaders.metallib", true);
 		}
-
-		SDL3.SDL.SDL_SetStringProperty(properties, SDL3.SDL.SDL_PROP_GPU_DEVICE_CREATE_NAME_STRING, "direct3d12");
 
 		// FIXME: we could redesign this API
 		var agilitySDKVersion = Environment.GetEnvironmentVariable("AGILITY_SDK_VERSION");

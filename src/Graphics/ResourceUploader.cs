@@ -50,7 +50,7 @@ public unsafe class ResourceUploader : GraphicsResource
 	public Buffer CreateBuffer<T>(string name, ReadOnlySpan<T> data, BufferUsageFlags usageFlags) where T : unmanaged
 	{
 		var buffer = Buffer.Create<T>(Device, name, usageFlags, (uint) data.Length);
-		SetBufferData(buffer, 0, data, false);
+		SetBufferData(buffer, 0, data);
 		return buffer;
 	}
 
@@ -64,7 +64,7 @@ public unsafe class ResourceUploader : GraphicsResource
 	public Buffer CreateBufferAndMap<T>(string name, uint desiredLengthInElements, BufferUsageFlags usageFlags, out Span<T> data) where T : unmanaged
 	{
 		var buffer = Buffer.Create<T>(Device, name, usageFlags, desiredLengthInElements);
-		data = MapBufferData<T>(buffer, 0, desiredLengthInElements, false);
+		data = MapBufferData<T>(buffer, 0, desiredLengthInElements);
 		return buffer;
 	}
 
@@ -87,7 +87,7 @@ public unsafe class ResourceUploader : GraphicsResource
 	/// <summary>
 	/// Prepares upload of data into a Buffer.
 	/// </summary>
-	public void SetBufferData<T>(Buffer buffer, uint bufferOffsetInElements, ReadOnlySpan<T> data, bool cycle) where T : unmanaged
+	public void SetBufferData<T>(Buffer buffer, uint bufferOffsetInElements, ReadOnlySpan<T> data) where T : unmanaged
 	{
 		Debug.Assert(buffer != null);
 
@@ -107,7 +107,7 @@ public unsafe class ResourceUploader : GraphicsResource
 				Offset = offsetInBytes,
 				Size = lengthInBytes
 			},
-			cycle
+			false
 		));
 	}
 
@@ -118,7 +118,7 @@ public unsafe class ResourceUploader : GraphicsResource
 	/// A <see cref="Span{T}"/> which can be written to. This <see cref="Span{T}"/> is not valid and
 	/// must not be used after any further calls to this instance.
 	/// </returns>
-	public Span<T> MapBufferData<T>(Buffer buffer, uint bufferOffsetInElements, uint desiredLengthInElements, bool cycle) where T : unmanaged
+	public Span<T> MapBufferData<T>(Buffer buffer, uint bufferOffsetInElements, uint desiredLengthInElements) where T : unmanaged
 	{
 		uint elementSize = (uint) Unsafe.SizeOf<T>();
 		uint offsetInBytes = elementSize * bufferOffsetInElements;
@@ -136,7 +136,7 @@ public unsafe class ResourceUploader : GraphicsResource
 				Offset = offsetInBytes,
 				Size = lengthInBytes
 			},
-			cycle
+			false
 		));
 
 		return data;
@@ -155,8 +155,7 @@ public unsafe class ResourceUploader : GraphicsResource
 				H = height,
 				D = 1
 			},
-			pixelData,
-			false
+			pixelData
 		);
 		return texture;
 	}
@@ -268,7 +267,7 @@ public unsafe class ResourceUploader : GraphicsResource
 					D = 1
 				};
 
-				SetTextureData(textureRegion, reader.SliceRemainder(levelSize), false);
+				SetTextureData(textureRegion, reader.SliceRemainder(levelSize));
 			}
 		}
 
@@ -307,7 +306,7 @@ public unsafe class ResourceUploader : GraphicsResource
 		var pixelData = ImageUtils.GetPixelDataFromBytes(compressedImageData, out var _, out var _, out var sizeInBytes);
 		var pixelSpan = new ReadOnlySpan<byte>((void*) pixelData, (int) sizeInBytes);
 
-		SetTextureData(textureRegion, pixelSpan, false);
+		SetTextureData(textureRegion, pixelSpan);
 
 		ImageUtils.FreePixelData(pixelData);
 	}
@@ -334,7 +333,7 @@ public unsafe class ResourceUploader : GraphicsResource
 	/// <summary>
 	/// Prepares upload of pixel data into a TextureSlice.
 	/// </summary>
-	public void SetTextureData<T>(in TextureRegion textureRegion, ReadOnlySpan<T> data, bool cycle) where T : unmanaged
+	public void SetTextureData<T>(in TextureRegion textureRegion, ReadOnlySpan<T> data) where T : unmanaged
 	{
 		Debug.Assert(textureRegion.Texture != IntPtr.Zero);
 
@@ -343,7 +342,7 @@ public unsafe class ResourceUploader : GraphicsResource
 		TextureUploads.Add(new TextureUpload(
 			resourceOffset,
 			textureRegion,
-			cycle
+			false
 		));
 	}
 
@@ -354,7 +353,7 @@ public unsafe class ResourceUploader : GraphicsResource
 	/// A <see cref="Span{T}"/> which can be written to. This <see cref="Span{T}"/> is not valid and
 	/// must not be used after any further calls to this instance.
 	/// </returns>
-	public Span<T> MapTextureData<T>(in TextureRegion textureRegion, uint desiredLengthInElements, bool cycle) where T : unmanaged
+	public Span<T> MapTextureData<T>(in TextureRegion textureRegion, uint desiredLengthInElements) where T : unmanaged
 	{
 		Debug.Assert(textureRegion.Texture != IntPtr.Zero);
 
@@ -363,7 +362,7 @@ public unsafe class ResourceUploader : GraphicsResource
 		TextureUploads.Add(new TextureUpload(
 			resourceOffset,
 			textureRegion,
-			cycle
+			false
 		));
 
 		return data;

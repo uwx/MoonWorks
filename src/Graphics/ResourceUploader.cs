@@ -393,6 +393,7 @@ public unsafe class ResourceUploader : GraphicsResource
 	private void Flush(bool wait = false)
 	{
 		if (TransferBuffer == null) { return; }
+		if (BufferUploads.Count == 0 && TextureUploads.Count == 0) { return; }
 
 		TransferBuffer.Unmap();
 		var commandBuffer = Device.AcquireCommandBuffer();

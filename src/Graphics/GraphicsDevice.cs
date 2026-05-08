@@ -490,6 +490,8 @@ public class GraphicsDevice : IDisposable
 	/// </summary>
 	public void Submit(CommandBuffer commandBuffer)
 	{
+		// Console.WriteLine("Submitting CMDList " + Environment.StackTrace);
+
 		bool result = SDL.SDL_SubmitGPUCommandBuffer(commandBuffer.Handle);
 		if (!result)
 		{
@@ -506,6 +508,8 @@ public class GraphicsDevice : IDisposable
 	/// <returns></returns>
 	public Fence SubmitAndAcquireFence(CommandBuffer commandBuffer)
 	{
+		// Console.WriteLine("Submitting CMDList " + Environment.StackTrace);
+
 		var fenceHandle = SDL.SDL_SubmitGPUCommandBufferAndAcquireFence(commandBuffer.Handle);
 
 		if (fenceHandle == IntPtr.Zero)

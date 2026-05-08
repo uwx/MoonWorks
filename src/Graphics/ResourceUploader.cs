@@ -55,10 +55,34 @@ public unsafe class ResourceUploader : GraphicsResource
 	}
 
 	/// <summary>
+	/// Creates a named Buffer with data to be uploaded.
+	/// </summary>
+	/// <returns>
+	/// A <see cref="Span{T}"/> which can be written to. This <see cref="Span{T}"/> is not valid and
+	/// must not be used after any further calls to this instance.
+	/// </returns>
+	public Buffer CreateBufferAndMap<T>(string name, uint desiredLengthInElements, BufferUsageFlags usageFlags, out Span<T> data) where T : unmanaged
+	{
+		var buffer = Buffer.Create<T>(Device, name, usageFlags, desiredLengthInElements);
+		data = MapBufferData<T>(buffer, 0, desiredLengthInElements, false);
+		return buffer;
+	}
+
+	/// <summary>
 	/// Creates a Buffer with data to be uploaded.
 	/// </summary>
 	public Buffer CreateBuffer<T>(ReadOnlySpan<T> data, BufferUsageFlags usageFlags) where T : unmanaged =>
 		CreateBuffer(null, data, usageFlags);
+
+	/// <summary>
+	/// Creates a Buffer with data to be uploaded.
+	/// </summary>
+	/// <returns>
+	/// A <see cref="Span{T}"/> which can be written to. This <see cref="Span{T}"/> is not valid and
+	/// must not be used after any further calls to this instance.
+	/// </returns>
+	public Buffer CreateBufferAndMap<T>(uint desiredLengthInElements, BufferUsageFlags usageFlags, out Span<T> data) where T : unmanaged =>
+		CreateBufferAndMap(null, desiredLengthInElements, usageFlags, out data);
 
 	/// <summary>
 	/// Prepares upload of data into a Buffer.
